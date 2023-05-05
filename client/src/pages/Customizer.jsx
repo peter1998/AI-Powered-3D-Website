@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useSnapshot } from "valtio";
 
@@ -22,7 +22,6 @@ const Customizer = () => {
   const [file, setFile] = useState("");
 
   const [prompt, setPrompt] = useState("");
-
   const [generatingImg, setGeneratingImg] = useState(false);
 
   const [activeEditorTab, setActiveEditorTab] = useState("");
@@ -31,7 +30,7 @@ const Customizer = () => {
     stylishShirt: false,
   });
 
-  //show tab content depending on the activeTab
+  // show tab content depending on the activeTab
   const generateTabContent = () => {
     switch (activeEditorTab) {
       case "colorpicker":
@@ -47,7 +46,6 @@ const Customizer = () => {
             handleSubmit={handleSubmit}
           />
         );
-
       default:
         return null;
     }
@@ -57,8 +55,32 @@ const Customizer = () => {
     if (!prompt) return alert("Please enter a prompt");
 
     try {
-      // call our backend to generate an AI image!
+      setGeneratingImg(true);
+      console.log("Prompt:", prompt); // Log the prompt
+      const response = await fetch("http://localhost:8080/api/v1/dalle", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          prompt,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Server response was not ok");
+      }
+
+      const data = await response.json();
+      console.log("Response data:", data);
+
+      if (!data.photo) {
+        throw new Error("Photo data is missing in the response");
+      }
+
+      handleDecals(type, `data:image/png;base64,${data.photo}`);
     } catch (error) {
+      console.error("Error in handleSubmit:", error);
       alert(error);
     } finally {
       setGeneratingImg(false);
@@ -81,14 +103,12 @@ const Customizer = () => {
       case "logoShirt":
         state.isLogoTexture = !activeFilterTab[tabName];
         break;
-
       case "stylishShirt":
         state.isFullTexture = !activeFilterTab[tabName];
         break;
-
       default:
-        state.isFullTexture = false;
         state.isLogoTexture = true;
+        state.isFullTexture = false;
         break;
     }
 
